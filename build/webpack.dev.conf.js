@@ -37,7 +37,7 @@ io.on('connection', socket => {
          socket.emit("full",{"roomId": data.roomId})
       }
       else {
-          //如果房间为空，则回调为房主权限，否则回调为房客权限
+          //如果房间为空，则回调给房主权限，否则为房客权限
           fn({"permission": roomInfo[data.roomId].length === 0 ? 1 : 0, "roomId": data.roomId})
           //将玩家名字放入房间数组
           roomInfo[data.roomId].push(data.playerName)
@@ -102,30 +102,57 @@ io.on('connection', socket => {
       console.log(roomInfo)
       
   });
-  //开始游戏
-  socket.on("startGame", data => {
+
+    //接收房主更改时间的命令并同步给房客
+    socket.on("changeTime", data => {
+        socket.to(data.roomId).emit("changeT",{"newTime": data.limitTime})
+    });
+
+    //接受房主更改难度的命令并同步给房客
+    socket.on("changeLevel", data => {
+        socket.to(data.roomId).emit("changeL", {"mode": data.mode})
+    });
+
+    //开始游戏
+    socket.on("startGame", data => {
       socket.to(data.roomId).emit("start")
       socket.emit("start")
       console.log("游戏开始！")
   });
-  //接收来自A的消息并传给B
-  socket.on("send", (data,fn) => {
+
+    //接受A对分数的更新并同步给B
+  socket.on("newscore", data => {
+      socket.to(data.roomId).emit("updatescore",{"updatescore":data.score})
+  });
+
+    //接收来自A的消息并传给B
+    socket.on("send", (data,fn) => {
       socket.to(data.roomId).emit("partnerMsg",{"msg": data.msg})
       fn("已发送")
       console.log("成功传递一条消息..")
   });
-  //接受A对分数的更新并同步给B
-  socket.on("newscore", data => {
-      socket.to(data.roomId).emit("updatescore",{"updatescore":data.score})
-  }),
 
-  //接受A完成了大的消块并返回给B接受对应惩罚
+    //接受A完成了大的消块并返回给B接受对应惩罚
   socket.on("scorechange", data => {
-      if(data.score == 64) {
+      if(data.score > 4) {
           //返回另一个人合成128的惩罚
           console.log("触发了128块惩罚");
-          socket.to(data.roomId).emit("score64")
+          socket.to(data.roomId).emit("score64", {'score': data.score})
       }
+  });
+
+    //游戏结束后用户自动退房
+  socket.on("gameover", data => {
+
+    //清除用户个人信息
+    var index = roomInfo[data.roomId].indexOf(data.playerName);
+    if (index !== -1) {
+      roomInfo[data.roomId].splice(index, 1);
+    } 
+    //连接断开
+    console.log("连接已断开");
+    socket.leave(data.roomId)
+    console.log(roomInfo)
   })
 
 })

@@ -1,12 +1,20 @@
 import Vue from 'vue'
 import Router from 'vue-router'
-import Index from '../components/Index.vue'
-import Room from '../components/Room.vue'
+import Index from '../pages/Index.vue'
+import SingleGame from '../pages/SingleGame.vue'
+import AgainstGame from '../pages/AgainstGame.vue'
+import NotFound from '../pages/NotFound.vue'
 
 Vue.use(Router)
 
+const originalPush = Router.prototype.push
+
+Router.prototype.push = function push(location) {
+  return originalPush.call(this, location).catch(err => err)
+}
+
 export default new Router({
-  mode: 'history',
+  // mode: 'history',
   routes: [
     {
       path: '/',
@@ -14,10 +22,19 @@ export default new Router({
       component: Index
     },
     {
-      path: '/room',
-      name: 'Room',
-      component: Room
+      path: '/single-game',
+      name: 'SingleGame',
+      component: SingleGame
+    },
+    {
+      path: '/against-game',
+      name: 'AgainstGame',
+      component: AgainstGame
+    },
+    { 
+      path: '*', 
+      component: NotFound 
     }
-
   ]
 })
+
